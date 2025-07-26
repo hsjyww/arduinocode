@@ -50,3 +50,7 @@ void loop()
 
     lastButtonState = reading;
 }
+// © 2025 hsjyww. All rights reserved.
+// 본 코드는 hsjyww가 제작한 아두이노 실습 예제입니다.
+// 무단 복제 및 배포를 금합니다.
+// 출처: https://github.com/hsjyww/arduinocode
