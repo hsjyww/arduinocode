@@ -1,9 +1,31 @@
 #include <Arduino.h>
+const int trigPin = 9;
+const int echoPin = 10;
 
-void setup()
-{
+void setup() {
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  Serial.begin(9600); // 시리얼 모니터 시작
 }
 
-void loop()
-{
+void loop() {
+  // 초음파 신호 발생
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // 신호가 돌아오는 시간 측정
+  long duration = pulseIn(echoPin, HIGH);
+
+  // 거리 계산 (cm 단위)
+  float distance = duration * 0.034 / 2;
+
+  // 시리얼 모니터로 출력
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  delay(500); // 0.5초마다 측정
 }
