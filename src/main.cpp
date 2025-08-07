@@ -1,27 +1,26 @@
 #include <Arduino.h>
-int buttonPin = 2;   // 버튼 입력 핀
-int buzzerPin = 8;   // 수동부저 출력 핀
-int buttonState = 0; // 버튼 상태 저장 변수
+#include <IRremote.h>  // IR 리모컨용 라이브러리
+
+const int RECV_PIN = 11;  // 적외선 수신기 신호핀
+const int LED_PIN = 7;    // LED 연결 핀
+
+IRrecv irrecv(RECV_PIN);  // 수신기 객체 생성
+decode_results results;   // 수신된 결과 저장
 
 void setup() {
-  pinMode(buttonPin, INPUT);
-  pinMode(buzzerPin, OUTPUT);
+  Serial.begin(9600);       // 시리얼 모니터 시작
+  irrecv.enableIRIn();      // 리모컨 수신기 작동 시작
+  pinMode(LED_PIN, OUTPUT); // LED 출력 핀 설정
 }
 
 void loop() {
-  buttonState = digitalRead(buttonPin); // 버튼 상태 읽기
+  if (irrecv.decode(&results)) {                 // 신호가 들어오면
+    Serial.println(results.value, HEX);          // 어떤 버튼인지 코드 출력
 
-  if (buttonState == HIGH) {
-    // 도레미파솔라시도 멜로디
-    tone(buzzerPin, 262, 300); delay(300);  // 도
-    tone(buzzerPin, 294, 300); delay(300);  // 레
-    tone(buzzerPin, 330, 300); delay(300);  // 미
-    tone(buzzerPin, 349, 300); delay(300);  // 파
-    tone(buzzerPin, 392, 300); delay(300);  // 솔
-    tone(buzzerPin, 440, 300); delay(300);  // 라
-    tone(buzzerPin, 494, 300); delay(300);  // 시
-    tone(buzzerPin, 523, 300); delay(300);  // 도
-    noTone(buzzerPin); // 소리 끄기
+    if (results.value == 0xFFA25D) {             // 예: 전원 버튼
+      digitalWrite(LED_PIN, !digitalRead(LED_PIN));  // 현재 상태 반전
+    }
+
+    irrecv.resume(); // 다음 신호 받을 준비
   }
 }
-
