@@ -1,18 +1,34 @@
 #include <Arduino.h>
+#include <LiquidCrystal.h>
 
-// 핀 설정
-const int trigPin   = 9;   // HC-SR04 Trig
-const int echoPin   = 10;  // HC-SR04 Echo
-const int buzzerPin = 3;   // 부저
+// 1602 LCD 병렬(4비트) 연결 핀 맵
+// LCD VSS → GND
+// LCD VDD → 5V
+// LCD V0  → 가변저항(10kΩ) 가운데 다리  ← 가변저항의 양쪽 다리는 5V와 GND
+// LCD RS  → D12
+// LCD RW  → GND
+// LCD E   → D11
+// LCD D4  → D5
+// LCD D5  → D4
+// LCD D6  → D3
+// LCD D7  → D2
+// LCD BLA → 5V  (백라이트 +)
+// LCD BLK → GND (백라이트 -)
 
-// 거리 임계값
-const int CLOSE_TONE_CM = 3;   // 3cm 이하 → 연속음(삐————)
-const int NEAR_CM       = 15;  // 근접 비프
-const int MID_CM        = 25;  // 중간 비프
-const int FAR_CM        = 40;  // 여유 비프
-const int MAX_BEEP_CM   = 200; // 이 초과 → 무음
+// 위 핀 맵에 맞춰 LiquidCrystal 객체 생성
+const int LCD_RS = 12;
+const int LCD_E  = 11;
+const int LCD_D4 = 5;
+const int LCD_D5 = 4;
+const int LCD_D6 = 3;
+const int LCD_D7 = 2;
+LiquidCrystal lcd(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
 
-// 1회 측정
+// 초음파 센서 핀
+const int trigPin = 9;   // Trig
+const int echoPin = 10;  // Echo
+
+// 1회 거리 측정 (cm, 실패 시 -1)
 int readDistanceOnce() {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -20,79 +36,56 @@ int readDistanceOnce() {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  unsigned long duration = pulseIn(echoPin, HIGH, 30000UL); // ~5m
-  if (duration == 0) return -1;
-  return (int)(duration * 0.0343 / 2.0); // μs → cm
+  unsigned long us = pulseIn(echoPin, HIGH, 30000UL); // ~5m까지 대기
+  if (us == 0) return -1;
+  int cm = (int)(us * 0.0343 / 2.0);
+  return (cm > 0 && cm < 400) ? cm : -1;
 }
 
-// 7회 측정 → 유효값만 중앙값
+// 7회 측정 후 중앙값으로 안정화
 int getStableDistance() {
   int vals[7], n = 0;
   for (int i = 0; i < 7; i++) {
     int d = readDistanceOnce();
-    if (d > 0 && d < 400) vals[n++] = d;
+    if (d >= 0) vals[n++] = d;
     delay(10);
   }
   if (n == 0) return -1;
-  for (int i = 1; i < n; i++) {
+
+  for (int i = 1; i < n; i++) {            // 삽입 정렬
     int key = vals[i], j = i - 1;
     while (j >= 0 && vals[j] > key) { vals[j+1] = vals[j]; j--; }
     vals[j+1] = key;
   }
-  return vals[n/2];
-}
-
-// 거리별 부저 제어
-void beepByDistance(int cm) {
-  if (cm < 0 || cm > MAX_BEEP_CM) { // 측정불가/너무 멀다 → 무음
-    noTone(buzzerPin);
-    delay(50);
-    return;
-  }
-
-  // 2cm 이하 → 연속음
-  if (cm <= CLOSE_TONE_CM) {
-    tone(buzzerPin, 1000);  // 1kHz 계속 울림
-    delay(50);              // CPU 숨 고르기
-    return;                 // noTone() 호출하지 않음 → 지속
-  }
-
-  // 비프 간격 제어 (가까울수록 빨라짐)
-  int onMs  = 80;
-  int offMs = 0;
-
-  if (cm <= NEAR_CM)      offMs = 120;
-  else if (cm <= MID_CM)  offMs = 250;
-  else if (cm <= FAR_CM)  offMs = 400;
-  else {
-    noTone(buzzerPin);     // FAR_CM 초과는 무음
-    delay(50);
-    return;
-  }
-
-  tone(buzzerPin, 1000);
-  delay(onMs);
-  noTone(buzzerPin);
-  delay(offMs);
+  return vals[n/2];                         // 중앙값
 }
 
 void setup() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
-  pinMode(buzzerPin, OUTPUT);
-  Serial.begin(9600);
+
+  lcd.begin(16, 2);                         // 16x2 LCD 초기화
+  lcd.clear();
+  lcd.setCursor(0, 0); lcd.print("Distance Meter");
+  lcd.setCursor(0, 1); lcd.print("Init...");
+  delay(800);
+
+  Serial.begin(9600);                       // 시리얼 모니터 확인용
 }
 
 void loop() {
   int distance = getStableDistance();
 
+  lcd.clear();
+  lcd.setCursor(0, 0); lcd.print("Distance:");
+  lcd.setCursor(0, 1);
   if (distance >= 0) {
-    Serial.print("거리 : ");
-    Serial.print(distance);
-    Serial.println(" cm");
+    lcd.print(distance); lcd.print(" cm    "); // 잔상 지우기용 공백
+    Serial.print("cm="); Serial.println(distance);
   } else {
-    Serial.println("거리 : 측정 불가");
+    lcd.print("No Reading   ");
+    Serial.println("No Reading");
   }
 
-  beepByDistance(distance);
+  delay(150);
 }
