@@ -1,5 +1,3 @@
-// 버튼을 누를 때마다 LED가 순서대로 켜지는 프로그램
-// © 2025 hsjyww. All rights reserved.
 #include <Arduino.h>
 int buttonPin = 7;      // 버튼이 연결된 핀 번호
 int leds[] = {2, 3, 4}; // LED가 연결된 핀 번호들 (2, 3, 4번 핀)
