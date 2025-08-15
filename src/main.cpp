@@ -1,39 +1,20 @@
-// 버튼을 누를 때마다 LED가 순서대로 켜지는 프로그램
-// © 2025 hsjyww. All rights reserved.
 #include <Arduino.h>
-int buttonPin = 7;      // 버튼이 연결된 핀 번호
-int leds[] = {2, 3, 4}; // LED가 연결된 핀 번호들 (2, 3, 4번 핀)
-int ledCount = 3;       // LED 개수
-int currentLed = 0;     // 현재 켜질 LED 번호(순서)
-bool lastButtonState = HIGH; // 이전 버튼 상태 저장
-bool currentButtonState;     // 현재 버튼 상태 저장
+int leds[]={2,3,4}; // LED 핀 번호
+int cnt=3;
 
-void setup() {
-  for (int i = 0; i < ledCount; i++) {
-    pinMode(leds[i], OUTPUT); // LED 핀을 출력으로 설정
-  }
-  pinMode(buttonPin, INPUT_PULLUP); // 버튼 핀을 입력 풀업으로 설정
+void setup(){
+  for(int i=0;i<cnt;i++) pinMode(leds[i],OUTPUT);
 }
 
-void loop() {
-  currentButtonState = digitalRead(buttonPin); // 버튼 상태 읽기
-
-  // 버튼이 눌렸는지 확인 (HIGH → LOW로 변했을 때)
-  if (lastButtonState == HIGH && currentButtonState == LOW) {
-    // 모든 LED 끄기
-    for (int i = 0; i < ledCount; i++) {
-      digitalWrite(leds[i], LOW);
-    }
-
-    // 현재 LED 켜기
-    digitalWrite(leds[currentLed], HIGH);
-
-    // 다음 LED로 이동 (마지막 LED 다음에는 처음으로 돌아감)
-    currentLed++;
-    if (currentLed >= ledCount) {
-      currentLed = 0;
-    }
+void loop(){
+  for(int i=0;i<cnt;i++){
+    digitalWrite(leds[i],HIGH);
+    delay(200);
+    digitalWrite(leds[i],LOW);
   }
-
-  lastButtonState = currentButtonState; // 현재 상태를 이전 상태로 저장
+  for(int i=cnt-1;i>=0;i--){
+    digitalWrite(leds[i],HIGH);
+    delay(200);
+    digitalWrite(leds[i],LOW);
+  }
 }
