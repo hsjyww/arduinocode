@@ -1,51 +1,44 @@
 #include <Arduino.h>
 
-const int ACTIVE_PIN = 9;  // 능동부저 → D9
-const int PASSIVE_PIN = 8; // 수동부저 → D8
+const int ACTIVE_PIN = 9;   // 능동부저 → D9
+const int PASSIVE_PIN = 8;  // 수동부저 → D8
 
 const int scale[] = {262, 294, 330, 349, 392, 440, 494, 523}; // 도레미파솔라시도
 const int scaleLen = sizeof(scale) / sizeof(scale[0]);
 
-void beepActive(unsigned long ms)
-{
+void beepActive(unsigned long ms) {
   digitalWrite(ACTIVE_PIN, HIGH);
   delay(ms);
   digitalWrite(ACTIVE_PIN, LOW);
 }
 
-void playPassive(int freq, int durMs)
-{
+void playPassive(int freq, int durMs) {
   tone(PASSIVE_PIN, freq, durMs);
   delay(durMs + 10); // 음이 겹치지 않도록 여유
 }
 
-void setup()
-{
+void setup() {
   pinMode(ACTIVE_PIN, OUTPUT);
   pinMode(PASSIVE_PIN, OUTPUT);
   Serial.begin(9600);
 }
 
-void loop()
-{
+void loop() {
   Serial.println("능동부저: 고정 톤 3회");
-  for (int i = 0; i < 3; i++)
-  {
+  for (int i = 0; i < 3; i++) {
     beepActive(300);
     delay(200);
   }
   delay(500);
 
   Serial.println("수동부저: 도레미파솔라시도");
-  for (int i = 0; i < scaleLen; i++)
-  {
+  for (int i = 0; i < scaleLen; i++) {
     playPassive(scale[i], 250);
   }
   delay(500);
 
   Serial.println("수동부저: 200Hz -> 2000Hz 주파수 스윕");
-  for (int f = 200; f <= 2000; f += 20)
-  {
+  for (int f = 200; f <= 2000; f += 20) {
     tone(PASSIVE_PIN, f, 20);
     delay(20);
   }
