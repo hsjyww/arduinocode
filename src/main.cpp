@@ -1,54 +1,102 @@
+
+
 #include <Arduino.h>
 
-const int ACTIVE_PIN = 9;  // 능동부저 → D9
-const int PASSIVE_PIN = 8; // 수동부저 → D8
+const int PIN_R = 9;
+const int PIN_G = 10;
+const int PIN_B = 11;
 
-const int scale[] = {262, 294, 330, 349, 392, 440, 494, 523}; // 도레미파솔라시도
-const int scaleLen = sizeof(scale) / sizeof(scale[0]);
+bool COMMON_ANODE = false;
+bool PIN_TEST_MODE = false;
 
-void beepActive(unsigned long ms)
-{
-  digitalWrite(ACTIVE_PIN, HIGH);
-  delay(ms);
-  digitalWrite(ACTIVE_PIN, LOW);
-}
-
-void playPassive(int freq, int durMs)
-{
-  tone(PASSIVE_PIN, freq, durMs);
-  delay(durMs + 10); // 음이 겹치지 않도록 여유
-}
+// 함수 프로토타입 선언
+void setColor(uint8_t r, uint8_t g, uint8_t b);
+void showColor(uint8_t r, uint8_t g, uint8_t b, uint16_t ms);
 
 void setup()
 {
-  pinMode(ACTIVE_PIN, OUTPUT);
-  pinMode(PASSIVE_PIN, OUTPUT);
-  Serial.begin(9600);
+  pinMode(PIN_R, OUTPUT);
+  pinMode(PIN_G, OUTPUT);
+  pinMode(PIN_B, OUTPUT);
+
+  if (PIN_TEST_MODE)
+  {
+    setColor(255, 0, 0);
+    delay(1000);
+    setColor(0, 255, 0);
+    delay(1000);
+    setColor(0, 0, 255);
+    delay(1000);
+    setColor(0, 0, 0);
+    delay(500);
+  }
 }
 
 void loop()
 {
-  Serial.println("능동부저: 고정 톤 3회");
-  for (int i = 0; i < 3; i++)
+  if (!PIN_TEST_MODE)
   {
-    beepActive(300);
-    delay(200);
-  }
-  delay(500);
+    showColor(255, 0, 0, 700);
+    showColor(0, 255, 0, 700);
+    showColor(0, 0, 255, 700);
+    showColor(255, 255, 0, 700);
+    showColor(0, 255, 255, 700);
+    showColor(255, 0, 255, 700);
+    showColor(255, 255, 255, 700);
+    showColor(0, 0, 0, 400);
 
-  Serial.println("수동부저: 도레미파솔라시도");
-  for (int i = 0; i < scaleLen; i++)
-  {
-    playPassive(scale[i], 250);
+    for (int i = 0; i <= 255; i++)
+    {
+      setColor(255, i, 0);
+      delay(5);
+    }
+    for (int i = 255; i >= 0; i--)
+    {
+      setColor(i, 255, 0);
+      delay(5);
+    }
+    for (int i = 0; i <= 255; i++)
+    {
+      setColor(0, 255, i);
+      delay(5);
+    }
+    for (int i = 255; i >= 0; i--)
+    {
+      setColor(0, i, 255);
+      delay(5);
+    }
+    for (int i = 0; i <= 255; i++)
+    {
+      setColor(i, 0, 255);
+      delay(5);
+    }
+    for (int i = 255; i >= 0; i--)
+    {
+      setColor(255, 0, i);
+      delay(5);
+    }
   }
-  delay(500);
+  else
+  {
+    delay(1000);
+  }
+}
 
-  Serial.println("수동부저: 200Hz -> 2000Hz 주파수 스윕");
-  for (int f = 200; f <= 2000; f += 20)
+void showColor(uint8_t r, uint8_t g, uint8_t b, uint16_t ms)
+{
+  setColor(r, g, b);
+  delay(ms);
+}
+
+void setColor(uint8_t r, uint8_t g, uint8_t b)
+{
+  if (COMMON_ANODE)
   {
-    tone(PASSIVE_PIN, f, 20);
-    delay(20);
+    r = 255 - r;
+    g = 255 - g;
+    b = 255 - b;
   }
-  noTone(PASSIVE_PIN);
-  delay(1500);
+  analogWrite(PIN_R, r);
+  analogWrite(PIN_G, g);
+  analogWrite(PIN_B, b);
 }

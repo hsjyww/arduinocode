@@ -1,0 +1,102 @@
+
+
+#include <Arduino.h>
+
+const int PIN_R = 9;
+const int PIN_G = 10;
+const int PIN_B = 11;
+
+bool COMMON_ANODE = false;
+bool PIN_TEST_MODE = false;
+
+// 함수 프로토타입 선언
+void setColor(uint8_t r, uint8_t g, uint8_t b);
+void showColor(uint8_t r, uint8_t g, uint8_t b, uint16_t ms);
+
+void setup()
+{
+    pinMode(PIN_R, OUTPUT);
+    pinMode(PIN_G, OUTPUT);
+    pinMode(PIN_B, OUTPUT);
+
+    if (PIN_TEST_MODE)
+    {
+        setColor(255, 0, 0);
+        delay(1000);
+        setColor(0, 255, 0);
+        delay(1000);
+        setColor(0, 0, 255);
+        delay(1000);
+        setColor(0, 0, 0);
+        delay(500);
+    }
+}
+
+void loop()
+{
+    if (!PIN_TEST_MODE)
+    {
+        showColor(255, 0, 0, 700);
+        showColor(0, 255, 0, 700);
+        showColor(0, 0, 255, 700);
+        showColor(255, 255, 0, 700);
+        showColor(0, 255, 255, 700);
+        showColor(255, 0, 255, 700);
+        showColor(255, 255, 255, 700);
+        showColor(0, 0, 0, 400);
+
+        for (int i = 0; i <= 255; i++)
+        {
+            setColor(255, i, 0);
+            delay(5);
+        }
+        for (int i = 255; i >= 0; i--)
+        {
+            setColor(i, 255, 0);
+            delay(5);
+        }
+        for (int i = 0; i <= 255; i++)
+        {
+            setColor(0, 255, i);
+            delay(5);
+        }
+        for (int i = 255; i >= 0; i--)
+        {
+            setColor(0, i, 255);
+            delay(5);
+        }
+        for (int i = 0; i <= 255; i++)
+        {
+            setColor(i, 0, 255);
+            delay(5);
+        }
+        for (int i = 255; i >= 0; i--)
+        {
+            setColor(255, 0, i);
+            delay(5);
+        }
+    }
+    else
+    {
+        delay(1000);
+    }
+}
+
+void showColor(uint8_t r, uint8_t g, uint8_t b, uint16_t ms)
+{
+    setColor(r, g, b);
+    delay(ms);
+}
+
+void setColor(uint8_t r, uint8_t g, uint8_t b)
+{
+    if (COMMON_ANODE)
+    {
+        r = 255 - r;
+        g = 255 - g;
+        b = 255 - b;
+    }
+    analogWrite(PIN_R, r);
+    analogWrite(PIN_G, g);
+    analogWrite(PIN_B, b);
+}
