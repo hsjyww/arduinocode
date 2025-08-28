@@ -1,26 +1,23 @@
 #include <Arduino.h>
-#include <Servo.h>
 
-const int joyX = A0;     // 조이스틱 X축 입력
-const int servoPin = 9;  // 서보모터 제어 핀
-
-Servo myServo;
+const int buttonOn = 2;   // LED 켜기 버튼
+const int buttonOff = 3;  // LED 끄기 버튼
+const int ledPin = 9;     // LED 핀
 
 void setup() {
-  myServo.attach(servoPin);
-  Serial.begin(9600);
+  pinMode(buttonOn, INPUT_PULLUP);   // 내부 풀업 사용
+  pinMode(buttonOff, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
 }
 
 void loop() {
-  int xValue = analogRead(joyX);            // 조이스틱 X축 값 (0~1023)
-  int angle = map(xValue, 0, 1023, 0, 180); // 서보 각도로 변환
-  myServo.write(angle);
+  // 버튼 A 눌리면 LED 켜기
+  if (digitalRead(buttonOn) == LOW) {
+    digitalWrite(ledPin, HIGH);
+  }
 
-  Serial.print("조이스틱 값: ");
-  Serial.print(xValue);
-  Serial.print(" → 서보 각도: ");
-  Serial.println(angle);
-
-  delay(15); // 서보 안정화 대기
+  // 버튼 B 눌리면 LED 끄기
+  if (digitalRead(buttonOff) == LOW) {
+    digitalWrite(ledPin, LOW);
+  }
 }
-

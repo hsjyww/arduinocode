@@ -1,0 +1,27 @@
+#include <Arduino.h>
+
+const int buttonOn = 2;  // LED 켜기 버튼
+const int buttonOff = 3; // LED 끄기 버튼
+const int ledPin = 9;    // LED 핀
+
+void setup()
+{
+  pinMode(buttonOn, INPUT_PULLUP); // 내부 풀업 사용
+  pinMode(buttonOff, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
+}
+
+void loop()
+{
+  // 버튼 A 눌리면 LED 켜기
+  if (digitalRead(buttonOn) == LOW)
+  {
+    digitalWrite(ledPin, HIGH);
+  }
+
+  // 버튼 B 눌리면 LED 끄기
+  if (digitalRead(buttonOff) == LOW)
+  {
+    digitalWrite(ledPin, LOW);
+  }
+}
