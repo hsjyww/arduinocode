@@ -2,19 +2,52 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
-// I2C LCD 주소 (보통 0x27 또는 0x3F)
-// 필요 시 I2C Scanner로 확인
+// LCD 객체 생성 (I2C 주소 0x27, 16x2)
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
+// 초음파 핀 설정
+const int trigPin = 9;
+const int echoPin = 10;
+
+long duration;
+float distance;
+
 void setup() {
-  lcd.init();            // LCD 초기화
-  lcd.backlight();       // 백라이트 켜기
-  lcd.setCursor(0, 0);   // 1행 1열 위치
-  lcd.print("Hello");    // 첫 번째 줄 출력
-  lcd.setCursor(0, 1);   // 2행 1열 위치
-  lcd.print("Arduino");  // 두 번째 줄 출력
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  lcd.init();        // LCD 초기화
+  lcd.backlight();   // 백라이트 켜기
+  lcd.setCursor(0, 0);
+  lcd.print("Distance(cm):");
+  Serial.begin(9600);
 }
 
 void loop() {
-  // 고정 텍스트 출력이므로 loop는 비워둠
+  // 초음파 발신
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Echo 신호 수신
+  duration = pulseIn(echoPin, HIGH);
+
+  // 거리 계산 (음속 340m/s 기준)
+  distance = duration * 0.034 / 2;
+
+  // LCD 표시
+  lcd.setCursor(0, 1);
+  lcd.print("      "); // 이전 값 지우기
+  lcd.setCursor(0, 1);
+  lcd.print(distance);
+  lcd.print(" cm");
+
+  // 시리얼 모니터 출력
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  delay(500);
 }
