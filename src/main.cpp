@@ -1,53 +1,28 @@
 #include <Arduino.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+#include <DHT.h>
 
-// LCD 객체 생성 (I2C 주소 0x27, 16x2)
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+#define DHTPIN 2
+#define DHTTYPE DHT11
 
-// 초음파 핀 설정
-const int trigPin = 9;
-const int echoPin = 10;
-
-long duration;
-float distance;
+DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-
-  lcd.init();        // LCD 초기화
-  lcd.backlight();   // 백라이트 켜기
-  lcd.setCursor(0, 0);
-  lcd.print("Distance(cm):");
   Serial.begin(9600);
+  dht.begin();
+  Serial.println("DHT11 Serial Monitor Ready");
 }
 
 void loop() {
-  // 초음파 발신
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-
-  // Echo 신호 수신
-  duration = pulseIn(echoPin, HIGH);
-
-  // 거리 계산 (음속 340m/s 기준)
-  distance = duration * 0.034 / 2;
-
-  // LCD 표시
-  lcd.setCursor(0, 1);
-  lcd.print("      "); // 이전 값 지우기
-  lcd.setCursor(0, 1);
-  lcd.print(distance);
-  lcd.print(" cm");
-
-  // 시리얼 모니터 출력
-  Serial.print("Distance: ");
-  Serial.print(distance);
-  Serial.println(" cm");
-
-  delay(500);
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();      // 섭씨
+  if (isnan(h) || isnan(t)) {
+    Serial.println("센서 읽기 실패. 배선/전원/풀업 저항 확인");
+  } else {
+    Serial.print("Humidity: ");
+    Serial.print(h, 1);
+    Serial.print(" %  |  Temp: ");
+    Serial.print(t, 1);
+    Serial.println(" C");
+  }
+  delay(2000);
 }
