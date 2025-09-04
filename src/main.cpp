@@ -1,28 +1,56 @@
 #include <Arduino.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 #include <DHT.h>
 
-#define DHTPIN 2
-#define DHTTYPE DHT11
-
+#define DHTPIN 2          // DHT11 데이터핀 → D2
+#define DHTTYPE DHT11     // 센서 타입
+// 필요 시 0x27 → 0x3F로 변경
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 DHT dht(DHTPIN, DHTTYPE);
 
+void showCentered(const String &line1, const String &line2) {
+  lcd.clear();
+  int col1 = max(0, (16 - (int)line1.length()) / 2);
+  int col2 = max(0, (16 - (int)line2.length()) / 2);
+  lcd.setCursor(col1, 0);
+  lcd.print(line1);
+  lcd.setCursor(col2, 1);
+  lcd.print(line2);
+}
+
 void setup() {
-  Serial.begin(9600);
+  Wire.begin();
+  lcd.init();
+  lcd.backlight();
   dht.begin();
-  Serial.println("DHT11 Serial Monitor Ready");
+
+  showCentered("DHT11 Thermo", "LCD Init...");
+  delay(1200);
 }
 
 void loop() {
   float h = dht.readHumidity();
-  float t = dht.readTemperature();      // 섭씨
+  float t = dht.readTemperature();       // 섭씨
+  // float f = dht.readTemperature(true); // 화씨 필요 시 사용
+
   if (isnan(h) || isnan(t)) {
-    Serial.println("센서 읽기 실패. 배선/전원/풀업 저항 확인");
-  } else {
-    Serial.print("Humidity: ");
-    Serial.print(h, 1);
-    Serial.print(" %  |  Temp: ");
-    Serial.print(t, 1);
-    Serial.println(" C");
+    showCentered("Sensor Error", "Check wiring");
+    delay(1200);
+    return;
   }
-  delay(2000);
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Temp: ");
+  lcd.print(t, 1);     // 소수 1자리
+  lcd.print((char)223);// '°' 기호
+  lcd.print("C");
+
+  lcd.setCursor(0, 1);
+  lcd.print("Hum : ");
+  lcd.print((int)round(h));
+  lcd.print("%");
+
+  delay(1000);
 }
