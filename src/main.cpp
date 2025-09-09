@@ -1,75 +1,88 @@
 #include <Arduino.h>
-#include <Wire.h>
-#include <RTClib.h>
+#include <SPI.h>
+#include <MFRC522.h>
 
-RTC_DS3231 rtc;
 
-const int buzzerPin = 8;   // 부저 +
-const int ALARM_HOUR   = 7;  // 알람 시각(24시간제)
-const int ALARM_MINUTE = 0;  // 알람 분
-const int ALARM_WINDOW_SEC = 10; // 알람을 감지하는 초 범위(중복 방지용)
-bool alarmLatched = false;
+constexpr uint8_t PIN_SS   = 10;   // MFRC522 SDA(SS)
+constexpr uint8_t PIN_RST  = 9;    // MFRC522 RST
+constexpr uint8_t PIN_RELAY = 7;   // 릴레이 IN
 
-void ringAlarm(unsigned long ms)
-{
-  unsigned long start = millis();
-  while (millis() - start < ms) {
-    tone(buzzerPin, 1000);
-    delay(300);
-    noTone(buzzerPin);
-    delay(120);
-    tone(buzzerPin, 1500);
-    delay(300);
-    noTone(buzzerPin);
-    delay(120);
-  }
+// 릴레이 모듈 특성: LOW에서 동작하는 경우 많음
+constexpr uint8_t RELAY_ACTIVE_LEVEL   = LOW;
+constexpr uint8_t RELAY_INACTIVE_LEVEL = HIGH;
+
+MFRC522 mfrc522(PIN_SS, PIN_RST);
+
+// 허용 카드 UID (시리얼 모니터로 확인 후 교체)
+byte ALLOWED_UID[][4] = {
+  { 0xA1, 0xFF, 0xAC, 0x7B }
+};
+const size_t NUM_UID = sizeof(ALLOWED_UID) / sizeof(ALLOWED_UID[0]);
+
+bool relayOn = false;
+unsigned long lastToggleMs = 0;
+const unsigned long toggleGuardMs = 600; // 중복 방지
+
+bool uidEquals(const byte *a, const byte *b, byte len) {
+  for (byte i = 0; i < len; i++) if (a[i] != b[i]) return false;
+  return true;
 }
 
-void setup()
-{
-  pinMode(buzzerPin, OUTPUT);
+bool isAllowedUID(MFRC522::Uid uid) {
+  if (uid.size != 4) return false;
+  for (size_t i = 0; i < NUM_UID; i++) {
+    if (uidEquals(uid.uidByte, ALLOWED_UID[i], 4)) return true;
+  }
+  return false;
+}
+
+void setRelay(bool on) {
+  relayOn = on;
+  digitalWrite(PIN_RELAY, on ? RELAY_ACTIVE_LEVEL : RELAY_INACTIVE_LEVEL);
+}
+
+void printUID(const MFRC522::Uid &uid) {
+  Serial.print("UID: ");
+  for (byte i = 0; i < uid.size; i++) {
+    if (uid.uidByte[i] < 0x10) Serial.print("0");
+    Serial.print(uid.uidByte[i], HEX);
+    if (i < uid.size - 1) Serial.print(":");
+  }
+  Serial.println();
+}
+
+void setup() {
   Serial.begin(9600);
-  if (!rtc.begin()) {
-    Serial.println("RTC를 찾을 수 없습니다. 배선 확인!");
-    while (1) { delay(10); }
-  }
+  while (!Serial) { ; }
+  SPI.begin();
+  mfrc522.PCD_Init();
 
-  if (rtc.lostPower()) {
-    // 스케치 컴파일(업로드) 시간으로 1회 설정
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    // 수동 설정 예시: 다음 줄 주석 해제 후 원하는 시각 입력
-    // rtc.adjust(DateTime(2025, 9, 8, 6, 59, 50)); // YYYY,MM,DD,HH,MM,SS
-  }
+  pinMode(PIN_RELAY, OUTPUT);
+  setRelay(false);
 
-  // 필요 시 알람 시간을 시리얼로 확인
-  Serial.print("Daily Alarm at ");
-  Serial.print(ALARM_HOUR);
-  Serial.print(":");
-  Serial.println(ALARM_MINUTE);
+  Serial.println("RFID + Relay → LED Control");
 }
 
-void loop()
-{
-  DateTime now = rtc.now();
+void loop() {
+  if (!mfrc522.PICC_IsNewCardPresent()) return;
+  if (!mfrc522.PICC_ReadCardSerial()) return;
 
-  // 현재 시간 출력
-  static uint32_t lastPrint = 0;
-  if (millis() - lastPrint > 1000) {
-    lastPrint = millis();
-    char buf[20];
-    snprintf(buf, sizeof(buf), "%02d:%02d:%02d", now.hour(), now.minute(), now.second());
-    Serial.println(buf);
-  }
+  unsigned long now = millis();
+  printUID(mfrc522.uid);
 
-  // 알람 조건: 지정된 시/분이고, 초가 ALARM_WINDOW_SEC 이내 + 래치 미설정
-  if (now.hour() == ALARM_HOUR && now.minute() == ALARM_MINUTE) {
-    if (!alarmLatched && now.second() < ALARM_WINDOW_SEC) {
-      Serial.println("ALARM RING!");
-      ringAlarm(8000); // 8초 울림
-      alarmLatched = true;
-    }
+  if (now - lastToggleMs < toggleGuardMs) {
+    Serial.println("중복 방지 대기 중...");
   } else {
-    // 분이 넘어가면 다음 날을 위해 래치 해제
-    alarmLatched = false;
+    if (isAllowedUID(mfrc522.uid)) {
+      setRelay(!relayOn);
+      Serial.print("인증 성공 → 릴레이 ");
+      Serial.println(relayOn ? "ON (LED 켜짐)" : "OFF (LED 꺼짐)");
+      lastToggleMs = now;
+    } else {
+      Serial.println("인증 실패 → LED 변화 없음");
+    }
   }
+
+  mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
 }
