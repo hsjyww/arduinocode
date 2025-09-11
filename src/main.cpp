@@ -1,88 +1,59 @@
+// 아두이노 기초 29편: 조이스틱 + 8채널 릴레이(4채널 사용) 방향별 제어
+// 릴레이 보드 Active-LOW(LOW=ON) 기준. HIGH=ON 보드면 RELAY_ON/RELAY_OFF를 바꾸세요.
 #include <Arduino.h>
-#include <SPI.h>
-#include <MFRC522.h>
+const int JOY_X = A1;      // 좌우
+const int JOY_Y = A0;      // 상하
 
+const int RELAY_UP    = 2; // IN1
+const int RELAY_DOWN  = 3; // IN2
+const int RELAY_LEFT  = 4; // IN3
+const int RELAY_RIGHT = 5; // IN4
 
-constexpr uint8_t PIN_SS   = 10;   // MFRC522 SDA(SS)
-constexpr uint8_t PIN_RST  = 9;    // MFRC522 RST
-constexpr uint8_t PIN_RELAY = 7;   // 릴레이 IN
+const int RELAY_ON  = LOW;   // Active-LOW
+const int RELAY_OFF = HIGH;
 
-// 릴레이 모듈 특성: LOW에서 동작하는 경우 많음
-constexpr uint8_t RELAY_ACTIVE_LEVEL   = LOW;
-constexpr uint8_t RELAY_INACTIVE_LEVEL = HIGH;
+// 방향 임계값(데드존 포함)
+const int TH_LOW  = 300;
+const int TH_HIGH = 700;
 
-MFRC522 mfrc522(PIN_SS, PIN_RST);
-
-// 허용 카드 UID (시리얼 모니터로 확인 후 교체)
-byte ALLOWED_UID[][4] = {
-  { 0xA1, 0xFF, 0xAC, 0x7B }
-};
-const size_t NUM_UID = sizeof(ALLOWED_UID) / sizeof(ALLOWED_UID[0]);
-
-bool relayOn = false;
-unsigned long lastToggleMs = 0;
-const unsigned long toggleGuardMs = 600; // 중복 방지
-
-bool uidEquals(const byte *a, const byte *b, byte len) {
-  for (byte i = 0; i < len; i++) if (a[i] != b[i]) return false;
-  return true;
-}
-
-bool isAllowedUID(MFRC522::Uid uid) {
-  if (uid.size != 4) return false;
-  for (size_t i = 0; i < NUM_UID; i++) {
-    if (uidEquals(uid.uidByte, ALLOWED_UID[i], 4)) return true;
-  }
-  return false;
-}
-
-void setRelay(bool on) {
-  relayOn = on;
-  digitalWrite(PIN_RELAY, on ? RELAY_ACTIVE_LEVEL : RELAY_INACTIVE_LEVEL);
-}
-
-void printUID(const MFRC522::Uid &uid) {
-  Serial.print("UID: ");
-  for (byte i = 0; i < uid.size; i++) {
-    if (uid.uidByte[i] < 0x10) Serial.print("0");
-    Serial.print(uid.uidByte[i], HEX);
-    if (i < uid.size - 1) Serial.print(":");
-  }
-  Serial.println();
+inline void allRelays(int state) {
+  digitalWrite(RELAY_UP, state);
+  digitalWrite(RELAY_DOWN, state);
+  digitalWrite(RELAY_LEFT, state);
+  digitalWrite(RELAY_RIGHT, state);
 }
 
 void setup() {
+  pinMode(RELAY_UP, OUTPUT);
+  pinMode(RELAY_DOWN, OUTPUT);
+  pinMode(RELAY_LEFT, OUTPUT);
+  pinMode(RELAY_RIGHT, OUTPUT);
+  allRelays(RELAY_OFF);
   Serial.begin(9600);
-  while (!Serial) { ; }
-  SPI.begin();
-  mfrc522.PCD_Init();
-
-  pinMode(PIN_RELAY, OUTPUT);
-  setRelay(false);
-
-  Serial.println("RFID + Relay → LED Control");
 }
 
 void loop() {
-  if (!mfrc522.PICC_IsNewCardPresent()) return;
-  if (!mfrc522.PICC_ReadCardSerial()) return;
+  int x = analogRead(JOY_X);
+  int y = analogRead(JOY_Y);
 
-  unsigned long now = millis();
-  printUID(mfrc522.uid);
+  allRelays(RELAY_OFF);
 
-  if (now - lastToggleMs < toggleGuardMs) {
-    Serial.println("중복 방지 대기 중...");
+  // 상/하 우선 → 좌/우 (동시 입력 흔들림 억제)
+  if (y < TH_LOW) {
+    digitalWrite(RELAY_UP, RELAY_ON);
+    Serial.println("UP");
+  } else if (y > TH_HIGH) {
+    digitalWrite(RELAY_DOWN, RELAY_ON);
+    Serial.println("DOWN");
+  } else if (x < TH_LOW) {
+    digitalWrite(RELAY_LEFT, RELAY_ON);
+    Serial.println("LEFT");
+  } else if (x > TH_HIGH) {
+    digitalWrite(RELAY_RIGHT, RELAY_ON);
+    Serial.println("RIGHT");
   } else {
-    if (isAllowedUID(mfrc522.uid)) {
-      setRelay(!relayOn);
-      Serial.print("인증 성공 → 릴레이 ");
-      Serial.println(relayOn ? "ON (LED 켜짐)" : "OFF (LED 꺼짐)");
-      lastToggleMs = now;
-    } else {
-      Serial.println("인증 실패 → LED 변화 없음");
-    }
+    Serial.println("CENTER");
   }
 
-  mfrc522.PICC_HaltA();
-  mfrc522.PCD_StopCrypto1();
+  delay(60);
 }
