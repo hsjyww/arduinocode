@@ -1,59 +1,92 @@
-// 아두이노 기초 29편: 조이스틱 + 8채널 릴레이(4채널 사용) 방향별 제어
-// 릴레이 보드 Active-LOW(LOW=ON) 기준. HIGH=ON 보드면 RELAY_ON/RELAY_OFF를 바꾸세요.
+// [아두이노 기초 30편] 8채널 릴레이 + LED → 미니 크리스마스 조명쇼
+// USB 케이블 전원 사용 / Active LOW 릴레이 모듈 기준
 #include <Arduino.h>
-const int JOY_X = A1;      // 좌우
-const int JOY_Y = A0;      // 상하
-
-const int RELAY_UP    = 2; // IN1
-const int RELAY_DOWN  = 3; // IN2
-const int RELAY_LEFT  = 4; // IN3
-const int RELAY_RIGHT = 5; // IN4
-
-const int RELAY_ON  = LOW;   // Active-LOW
-const int RELAY_OFF = HIGH;
-
-// 방향 임계값(데드존 포함)
-const int TH_LOW  = 300;
-const int TH_HIGH = 700;
-
-inline void allRelays(int state) {
-  digitalWrite(RELAY_UP, state);
-  digitalWrite(RELAY_DOWN, state);
-  digitalWrite(RELAY_LEFT, state);
-  digitalWrite(RELAY_RIGHT, state);
-}
+const int relayPins[8] = {2,3,4,5,6,7,8,9};
+const int N = 8;
 
 void setup() {
-  pinMode(RELAY_UP, OUTPUT);
-  pinMode(RELAY_DOWN, OUTPUT);
-  pinMode(RELAY_LEFT, OUTPUT);
-  pinMode(RELAY_RIGHT, OUTPUT);
-  allRelays(RELAY_OFF);
-  Serial.begin(9600);
+  for (int i=0; i<N; i++) {
+    pinMode(relayPins[i], OUTPUT);
+    digitalWrite(relayPins[i], HIGH); // OFF로 시작
+  }
+}
+
+void allOn(int hold=150) {
+  for (int i=0; i<N; i++) digitalWrite(relayPins[i], LOW);
+  delay(hold);
+}
+
+void allOff(int hold=150) {
+  for (int i=0; i<N; i++) digitalWrite(relayPins[i], HIGH);
+  delay(hold);
+}
+
+void patternChase(int rep=3) {
+  for (int r=0; r<rep; r++) {
+    for (int i=0; i<N; i++) {
+      allOff(0);
+      digitalWrite(relayPins[i], LOW);
+      delay(120);
+    }
+  }
+}
+
+void patternWave(int rep=2) {
+  for (int r=0; r<rep; r++) {
+    for (int i=0; i<N; i++) { allOff(0); digitalWrite(relayPins[i], LOW); delay(100); }
+    for (int i=N-1; i>=0; i--) { allOff(0); digitalWrite(relayPins[i], LOW); delay(100); }
+  }
+}
+
+void patternOddEven(int rep=4) {
+  for (int r=0; r<rep; r++) {
+    allOff(0);
+    for (int i=0; i<N; i+=2) digitalWrite(relayPins[i], LOW);
+    delay(200);
+    allOff(0);
+    for (int i=1; i<N; i+=2) digitalWrite(relayPins[i], LOW);
+    delay(200);
+  }
+}
+
+void patternCenterOut(int rep=3) {
+  int L = (N/2)-1;
+  int R = (N/2);
+  for (int r=0; r<rep; r++) {
+    allOff(0);
+    int l=L, rr=R;
+    while (l>=0 && rr<N) {
+      digitalWrite(relayPins[l], LOW);
+      digitalWrite(relayPins[rr], LOW);
+      delay(150);
+      l--; rr++;
+    }
+    delay(200);
+  }
+  allOff(0);
+}
+
+void patternSparkle(int rep=40) {
+  for (int r=0; r<rep; r++) {
+    int i = random(0, N);
+    digitalWrite(relayPins[i], LOW);
+    delay(80);
+    digitalWrite(relayPins[i], HIGH);
+  }
+}
+
+void patternStrobe(int rep=6) {
+  for (int r=0; r<rep; r++) {
+    allOn(100);
+    allOff(100);
+  }
 }
 
 void loop() {
-  int x = analogRead(JOY_X);
-  int y = analogRead(JOY_Y);
-
-  allRelays(RELAY_OFF);
-
-  // 상/하 우선 → 좌/우 (동시 입력 흔들림 억제)
-  if (y < TH_LOW) {
-    digitalWrite(RELAY_UP, RELAY_ON);
-    Serial.println("UP");
-  } else if (y > TH_HIGH) {
-    digitalWrite(RELAY_DOWN, RELAY_ON);
-    Serial.println("DOWN");
-  } else if (x < TH_LOW) {
-    digitalWrite(RELAY_LEFT, RELAY_ON);
-    Serial.println("LEFT");
-  } else if (x > TH_HIGH) {
-    digitalWrite(RELAY_RIGHT, RELAY_ON);
-    Serial.println("RIGHT");
-  } else {
-    Serial.println("CENTER");
-  }
-
-  delay(60);
+  patternChase();
+  patternWave();
+  patternOddEven();
+  patternCenterOut();
+  patternSparkle();
+  patternStrobe();
 }
