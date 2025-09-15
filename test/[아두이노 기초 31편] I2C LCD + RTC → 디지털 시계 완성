@@ -33,7 +33,7 @@ void setup() {
 
   // RTC가 처음이거나 전원유실 후 초기화 필요 시, 컴파일 시각으로 자동 맞춤
   if (rtc.lostPower()) {
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    rtc.adjust(DateTime(2025, 9, 15, 15, 21, 00));
   }
 
   lcd.clear();
