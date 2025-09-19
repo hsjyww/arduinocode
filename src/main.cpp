@@ -1,26 +1,32 @@
 #include <Arduino.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
-int ledPins[] = {2,3,4,5,6,7,8,9}; // LED 핀 배열
-int ledCount = 8;
+const int pirPin = 2;
+int motionCount = 0;
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 void setup() {
-  for (int i = 0; i < ledCount; i++) {
-    pinMode(ledPins[i], OUTPUT);
-  }
+  pinMode(pirPin, INPUT);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0,0);
+  lcd.print("PIR Motion Log");
+  delay(1000);
+  lcd.clear();
 }
 
 void loop() {
-  // 왼쪽에서 오른쪽으로 점등
-  for (int i = 0; i < ledCount; i++) {
-    digitalWrite(ledPins[i], HIGH);
-    delay(200);
-    digitalWrite(ledPins[i], LOW);
-  }
+  int pirState = digitalRead(pirPin);
 
-  // 오른쪽에서 왼쪽으로 점등
-  for (int i = ledCount - 1; i >= 0; i--) {
-    digitalWrite(ledPins[i], HIGH);
-    delay(200);
-    digitalWrite(ledPins[i], LOW);
+  if (pirState == HIGH) {
+    motionCount++;
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Motion Detected!");
+    lcd.setCursor(0,1);
+    lcd.print("Count: ");
+    lcd.print(motionCount);
+    delay(2000);
   }
 }
