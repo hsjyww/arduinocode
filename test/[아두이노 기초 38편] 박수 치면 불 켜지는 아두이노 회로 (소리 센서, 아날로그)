@@ -1,0 +1,35 @@
+#include <Arduino.h>
+
+const int MIC = A0; // 소리 센서 OUT → A0
+const int LED = 13; // LED 핀 (220Ω 저항 직렬)
+
+float base = 0.0;
+const float alpha = 0.02;
+int thresh = 60; // 임계값: 조용할 때 변동폭보다 20~30 정도 크게
+unsigned long lastMs = 0;
+const unsigned long cooldown = 300;
+
+void setup()
+{
+    pinMode(LED, OUTPUT);
+    long sum = 0;
+    for (int i = 0; i < 200; i++)
+    {
+        sum += analogRead(MIC);
+        delay(2);
+    }
+    base = sum / 200.0;
+}
+
+void loop()
+{
+    int v = analogRead(MIC);
+    base = (1 - alpha) * base + alpha * v;
+    int peak = abs(v - (int)base);
+
+    if (peak > thresh && millis() - lastMs > cooldown)
+    {
+        digitalWrite(LED, !digitalRead(LED));
+        lastMs = millis();
+    }
+}

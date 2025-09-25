@@ -1,19 +1,28 @@
 #include <Arduino.h>
 
-int potPin = A0;   // 포텐쇼미터 입력 핀
-int ledPin = 9;    // PWM 출력 핀 (LED 연결)
-int potValue = 0;  // 포텐쇼미터 값
-int ledValue = 0;  // LED 밝기 값 (0~255)
+const int MIC = A0;   // 소리 센서 OUT → A0
+const int LED = 13;   // LED 핀 (220Ω 저항 직렬)
+
+float base = 0.0;                 
+const float alpha = 0.02;         
+int thresh = 60;                  // 임계값: 조용할 때 변동폭보다 20~30 정도 크게
+unsigned long lastMs = 0;
+const unsigned long cooldown = 300; 
 
 void setup() {
-  pinMode(ledPin, OUTPUT);
-  Serial.begin(9600);  // 디버깅용 시리얼 모니터
+  pinMode(LED, OUTPUT);
+  long sum=0; 
+  for(int i=0;i<200;i++){ sum+=analogRead(MIC); delay(2); }
+  base = sum/200.0;               
 }
 
 void loop() {
-  potValue = analogRead(potPin);         // 0~1023 값 읽기
-  ledValue = map(potValue, 0, 1023, 0, 255); // 0~255로 변환
-  analogWrite(ledPin, ledValue);         // LED 밝기 제어
-  Serial.println(ledValue);              // 시리얼로 출력
-  delay(10);
+  int v = analogRead(MIC);
+  base = (1-alpha)*base + alpha*v;
+  int peak = abs(v - (int)base);  
+
+  if (peak > thresh && millis()-lastMs > cooldown) {
+    digitalWrite(LED, !digitalRead(LED));  
+    lastMs = millis();
+  }
 }
